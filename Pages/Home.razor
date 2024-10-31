@@ -1,0 +1,94 @@
+﻿@page "/"
+@using Weather_App.Models
+@using Weather_App.Services
+@inject WeatherService WeatherService
+
+<div class="weather-container">
+    <h3>Weather App</h3>
+
+    <input type="text" @bind="city" placeholder="Enter city name" class="city-input" />
+    <button @onclick="GetWeather">Get Weather</button>
+
+    @if (isLoading)
+    {
+            <p>Loading...</p> <!-- Simple loading indicator -->
+    }
+    else if (weatherData != null)
+    {
+            <!-- Current Weather Details -->
+            <div>
+                <br>
+                <h4>Current Weather for @weatherData.Location?.Name</h4>
+                <p><strong>City:</strong> @weatherData.Location?.Name </p>
+                <p><strong>Region:</strong> @weatherData.Location?.Region</p>
+                <p><strong>Country:</strong> @weatherData.Location?.Country </p>
+                <p><strong>Local Date & Time:</strong> @weatherData.Location?.Localtime </p>
+                <p><strong>Temperature:</strong> @weatherData.Current?.Temp_c.ToString("0.##") &deg;C</p>
+                <p><strong>Feels Like:</strong> @weatherData.Current?.Feelslike_c.ToString("0.##") &deg;C</p>
+                <p><strong>Humidity:</strong> @(weatherData.Current?.Humidity ?? 0) %</p>
+                <p><strong>Weather:</strong> @weatherData.Current?.Condition?.Text </p>
+                <img src="https:@(weatherData.Current?.Condition?.Icon)" alt="Weather Icon" />
+                <p><strong>Wind Speed:</strong> @weatherData.Current?.Wind_kph.ToString("0.##") kph</p>
+                <p><strong>Wind Direction:</strong> @weatherData.Current?.Wind_dir </p>
+            </div>
+
+            <!-- 7-Day Forecast -->
+            <h4>7-Day Weather Forecast</h4>
+            <div class="forecast-container">
+            @if (weatherData.Forecast?.Forecastday != null && weatherData.Forecast.Forecastday.Any())
+            {
+                foreach (var day in weatherData.Forecast.Forecastday)
+                {
+                                <div class="day-forecast">
+                                    <h5>@(DateTime.TryParse(day.Date, out var parsedDate) ? parsedDate.ToString("MMMM dd, yyyy") : "N/A")</h5>
+                                    <p><strong>Max Temp:</strong> @day.Day?.Maxtemp_c &deg;C</p>
+                                    <p><strong>Min Temp:</strong> @day.Day?.Mintemp_c &deg;C</p>
+                                    <p><strong>Avg Temp:</strong> @day.Day?.Avgtemp_c &deg;C</p>
+                                    <p><strong>Condition:</strong> @day.Day?.Condition?.Text </p>
+                                    <img src="https:@(day.Day?.Condition?.Icon)" alt="Weather Icon" />
+                                    <p><strong>Chance of Rain:</strong> @day.Day?.Daily_chance_of_rain %</p>
+                                    <p><strong>Humidity:</strong> @day.Day?.Avghumidity %</p>
+                                </div>
+                }
+            }
+            else
+            {
+                        <p>No forecast data available.</p>
+            }
+            </div>
+    }
+    else if (isCitySearched)
+    {
+            <p>No weather data found for '@city'. Please try a different city.</p>
+    }
+</div>
+
+@code {
+    private string? city;
+    private WeatherModel? weatherData;
+    private bool isCitySearched = false;
+    private bool isLoading = false; // New loading state
+
+    private async Task GetWeather()
+    {
+        if (!string.IsNullOrWhiteSpace(city))
+        {
+            isLoading = true; // Set loading state
+            try
+            {
+                weatherData = await WeatherService.GetWeatherAsync(city);
+                isCitySearched = true; // Update search state
+            }
+            catch (Exception )
+            {
+                // Handle error (optional: log it, show a message)
+                isCitySearched = true;
+                weatherData = null; // Reset weather data on error
+            }
+            finally
+            {
+                isLoading = false; // Reset loading state
+            }
+        }
+    }
+}
